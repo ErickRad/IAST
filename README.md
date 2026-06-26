@@ -1,117 +1,124 @@
-# 🌱 Ybyscan — Segmentação Inteligente de Imagens Agrícolas
+# IAST — Intelligent Agricultural images Segmentation Tool
 
-**Ybyscan** é um miniaplicativo de linha de comando (CLI) criado para a  
-**Ybysys Agricultura Inteligente e Acessível**, com foco em **visão computacional agrícola**.  
-Ele realiza **segmentação de imagens** de plantações usando dois métodos clássicos:  
-**HSV (por cor)** e **K-Means (por agrupamento)**.
+**IAST** is a lightweight command-line application (CLI) developed for **Demetec Agro**. It focuses on agricultural computer vision by performing image segmentation using two classical computer vision techniques: **HSV color thresholding** and **K-Means clustering**.
 
----
+## Features
 
-## 🚀 Funcionalidades
+* Load local images (optional webcam support)
+* Segment **green** or **blue** regions
+* Switch between **HSV** and **K-Means** segmentation
+* Fine-tune HSV thresholds through command-line arguments
+* Generate:
 
-- 📸 Carrega imagens locais (ou stream de webcam, opcional)
-- 🏞 Segmenta regiões 🟢**verdes** ou 🔵**azuis**
-- 🔁 Alterna métodos `HSV` ↔ `K-Means`
-- 🎚️ Ajuste fino de limiares HSV via flags
-- 💾 Gera:
-  - `*_mask.png` — Máscara binária (0/255)
-  - `*_overlay.png` — Máscara sobre a imagem original
-- 📊 Log informativo:
-  - Tempo de execução
-  - Percentual de pixels segmentados
+  * `*_mask.png` — Binary segmentation mask (0/255)
+  * `*_overlay.png` — Segmentation overlay on the original image
+* Display execution statistics:
 
----
+  * Processing time
+  * Percentage of segmented pixels
 
-## 🧠 Métodos Implementados
+## Implemented Methods
 
-### Segmentação por Cor (HSV):
+### HSV Color Segmentation
 
-Converte a imagem para o espaço **HSV** e aplica filtros por intervalo de cor (`H`, `S`, `V`).  
-Ideal para identificar áreas verdes de cultivo ou superfícies azuis como lonas e marcações.
+Converts the input image to the **HSV** color space and applies thresholding based on configurable ranges of **Hue**, **Saturation**, and **Value**. This approach is well suited for detecting vegetation or blue agricultural materials such as tarps and field markers.
 
 ```bash
-python segment.py --input samples/milho.jpg --method hsv --target green
+python segment.py --input samples/corn.jpg --method hsv --target green
 ```
 
-Ajuste fino (verde intenso):
+Example with custom HSV thresholds:
 
 ```bash
-python segment.py --input samples/plantacao.jpg --method hsv --target green \
+python segment.py --input samples/field.jpg --method hsv --target green \
 --hmin 35 --hmax 85 --smin 60 --smax 255 --vmin 40 --vmax 255
 ```
 
-### Segmentação por Agrupamento (K-Means):
+### K-Means Segmentation
 
-Aplica K-Means clustering nos pixels (em RGB ou HSV) para separar regiões por similaridade de cor.
-O cluster mais próximo da cor-alvo é considerado área segmentada.
+Applies K-Means clustering to image pixels (RGB or HSV) to group regions with similar colors. The cluster closest to the selected target color is considered the segmented region.
 
 ```bash
-python segment.py --input samples/soja.jpg --method kmeans --k 3 --target green
+python segment.py --input samples/soybean.jpg --method kmeans --k 3 --target green
 ```
 
-## ⚠️ Limitações
+## Limitations
 
-Embora o **Ybyscan** entregue bons resultados em condições controladas, alguns fatores reais de campo podem impactar a precisão da segmentação:
+Although IAST produces reliable results under controlled conditions, several real-world factors may reduce segmentation accuracy.
 
-### 🌤️ 1. Iluminação irregular
-- Mudanças bruscas de luminosidade (como sol e sombra) afetam o valor **V (Value)** no espaço HSV.  
-- Em imagens com brilho intenso, a cor tende a “estourar” para branco, confundindo o filtro.
+### Uneven Lighting
 
-### 🍂 2. Baixa saturação
-- Folhas amareladas, secas ou com baixo vigor apresentam saturação muito baixa, dificultando a segmentação baseada em cor.  
-- O algoritmo pode confundir essas áreas com o solo.
+Significant illumination changes affect the **Value (V)** channel in the HSV color space. Overexposed images may cause colors to shift toward white, reducing segmentation quality.
 
-### 🪵 3. Presença de ruído visual
-- Objetos com cores próximas (como troncos, mourões, ou plástico degradado) podem ser detectados como verde/azul.  
-- Uma filtragem morfológica extra (ex: `cv2.morphologyEx`) poderia reduzir falsos positivos.
+### Low Color Saturation
 
-### 🔁 4. Dependência de parâmetros
-- O método HSV exige **ajuste manual dos limiares** conforme a câmera, o horário e o tipo de cultura.  
-- Pequenas variações de `Hmin/Hmax` podem alterar drasticamente o resultado.
+Dry, yellowish, or unhealthy vegetation often exhibits low saturation, making it difficult to distinguish from soil using color-based segmentation alone.
 
-### 🧮 5. Variabilidade do K-Means
-- O K-Means inicia com centróides aleatórios — isso faz com que resultados possam variar levemente a cada execução.  
-- Para reprodutibilidade total, é necessário fixar a semente (`np.random.seed()`).
+### Visual Noise
 
-### 🌾 6. Contexto agrícola real
-- Sombras das folhas, variações de solo e mistura de espécies no mesmo quadro reduzem a pureza da segmentação.  
-- O algoritmo não distingue *tipo de planta*, apenas separa cores dominantes.
+Objects with colors similar to the target, such as tree trunks, wooden posts, or weathered plastic, may generate false positives. Morphological operations (e.g., `cv2.morphologyEx`) can help reduce these artifacts.
 
----
+### Parameter Sensitivity
 
-🔧 **Sugestões futuras**:
-- Aplicar equalização de histograma (`cv2.equalizeHist`) para corrigir iluminação.
-- Implementar um pós-processamento com morfologia (erosão/dilatação) (Uma questão ainda não aprofundada por mim).
-- Incorporar aprendizado de máquina leve (CNN ou U-Net compacta) para reconhecimento semântico.
+HSV segmentation requires manual threshold adjustment depending on camera characteristics, crop type, and lighting conditions. Small threshold changes may significantly alter the output.
 
+### K-Means Variability
 
-## ⚙️ Instalação
+Since K-Means initializes cluster centers randomly, segmentation results may vary slightly between executions. Setting a fixed random seed (`np.random.seed()`) ensures reproducible results.
 
-### 1. Clone o repositório:
+### Real-World Agricultural Conditions
 
-git clone https://github.com/ErickRad/ybyscan.git  
-cd ybyscan
+Shadows, soil variability, and mixed vegetation reduce segmentation accuracy. The algorithm identifies dominant colors rather than specific plant species.
 
-### 2. Crie e ative um ambiente virtual:
+## Future Improvements
 
-python -m venv .venv  
-source .venv/bin/activate   # Linux/macOS  
-.venv\Scripts\activate      # Windows  
- 
-### 3. Instale as dependências:
+* Apply histogram equalization (`cv2.equalizeHist`) to improve illumination consistency.
+* Add morphological post-processing (erosion and dilation) to reduce segmentation noise.
+* Integrate lightweight deep learning models, such as compact CNNs or U-Net architectures, for semantic segmentation.
 
+## Installation
+
+### Clone the repository
+
+```bash
+git clone https://github.com/ErickRad/IAST.git
+cd IAST
+```
+
+### Create and activate a virtual environment
+
+**Linux/macOS**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+**Windows**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+### Install dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-## 📦 Estrutura do Projeto
+## Project Structure
 
-ybyscan/  
-├── segment.py  
-├── segmentation/  
-│   ├── base_segmenter.py  
-│   ├── hsv_segmenter.py  
-│   └── kmeans_segmenter.py  
-├── outputs/  
-├── samples/  
-│   └── soja.jpg  
-├── requirements.txt  
-└── README.md  
+```text
+IAST/
+├── segment.py
+├── segmentation/
+│   ├── base_segmenter.py
+│   ├── hsv_segmenter.py
+│   └── kmeans_segmenter.py
+├── outputs/
+├── samples/
+│   └── soybean.jpg
+├── requirements.txt
+└── README.md
+```
